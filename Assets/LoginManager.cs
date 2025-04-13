@@ -31,5 +31,5 @@ public class LoginManager : MonoBehaviourPunCallbacks
         index++;
         screens = changeScreen(screens);
     }
-    public override void 
+    
 }
