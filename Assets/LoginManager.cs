@@ -1,13 +1,15 @@
 using UnityEngine;
 using Photon.Pun;
+using TMPro;
 public class LoginManager : MonoBehaviourPunCallbacks
 {
     public GameObject[] screens;
-    private int index;
+    private int index = 0;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         PhotonNetwork.ConnectUsingSettings();
+        screens = changeScreen(screens);
     }
 
     // Update is called once per frame
@@ -28,8 +30,18 @@ public class LoginManager : MonoBehaviourPunCallbacks
     }
     public override void OnConnectedToMaster()
     {
+        
+        PhotonNetwork.JoinLobby();
+    }
+    public void changeName()
+    {
+        PhotonNetwork.LocalPlayer.NickName = screens[index].GetComponentInChildren<TMP_InputField>().text;
         index++;
         screens = changeScreen(screens);
     }
-    
+    public override void OnJoinedLobby()
+    {
+        index++;
+        screens = changeScreen(screens);
+    }
 }
