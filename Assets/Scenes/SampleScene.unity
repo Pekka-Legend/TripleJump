@@ -791,7 +791,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &360976409
 RectTransform:
   m_ObjectHideFlags: 0
@@ -858,7 +858,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 219652076}
         m_TargetAssemblyTypeName: LoginManager, Assembly-CSharp
-        m_MethodName: JoinRoom
+        m_MethodName: startMatch
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3191,7 +3191,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 219652076}
         m_TargetAssemblyTypeName: LoginManager, Assembly-CSharp
-        m_MethodName: toRoomJoin
+        m_MethodName: changeName
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

@@ -2,6 +2,8 @@ using UnityEngine;
 using Photon.Pun;
 using TMPro;
 using Photon.Realtime;
+using UnityEngine.SceneManagement;
+using Hashtable = ExitGames.Client.Photon.Hashtable;//How to Hashtable (unnecessary for this but I wrote it down incase I forget)
 public class LoginManager : MonoBehaviourPunCallbacks
 {
     public GameObject[] screens;
@@ -100,7 +102,7 @@ public class LoginManager : MonoBehaviourPunCallbacks
     }
     public void startMatch()
     {
-        
+        SceneManager.LoadScene(1);
     }
     
 }
