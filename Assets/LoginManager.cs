@@ -44,4 +44,22 @@ public class LoginManager : MonoBehaviourPunCallbacks
         index++;
         screens = changeScreen(screens);
     }
+    public void toRoomJoin()
+    {
+        index++;
+        screens = changeScreen(screens);
+    }
+    public void CreateRoom()
+    {
+        PhotonNetwork.CreateRoom(screens[index].GetComponentInChildren<TMP_InputField>().text);
+    }
+    public void JoinRoom()
+    {
+        PhotonNetwork.CreateRoom(screens[index].GetComponentInChildren<TMP_InputField>().text);
+    }
+    public override void OnJoinedRoom()
+    {
+        index++;
+        screens = changeScreen(screens);
+    }
 }
