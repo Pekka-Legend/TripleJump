@@ -1,10 +1,13 @@
 using UnityEngine;
 using Photon.Pun;
 using TMPro;
+using Photon.Realtime;
 public class LoginManager : MonoBehaviourPunCallbacks
 {
     public GameObject[] screens;
     private int index = 0;
+    public GameObject startButton;
+    public GameObject oppName;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -51,15 +54,28 @@ public class LoginManager : MonoBehaviourPunCallbacks
     }
     public void CreateRoom()
     {
-        PhotonNetwork.CreateRoom(screens[index].GetComponentInChildren<TMP_InputField>().text);
+        int maxPlayers = 2;
+        RoomOptions roomOptions = new RoomOptions();
+
+        roomOptions.MaxPlayers = System.Convert.ToByte(maxPlayers + 1);
+
+        PhotonNetwork.CreateRoom(screens[index].GetComponentInChildren<TMP_InputField>().text, roomOptions);
     }
     public void JoinRoom()
     {
-        PhotonNetwork.CreateRoom(screens[index].GetComponentInChildren<TMP_InputField>().text);
+        
+        PhotonNetwork.JoinRoom(screens[index].GetComponentInChildren<TMP_InputField>().text);
     }
     public override void OnJoinedRoom()
     {
         index++;
         screens = changeScreen(screens);
+        if (PhotonNetwork.LocalPlayer.IsMasterClient)
+            startButton.SetActive(true);
     }
+    public void startMatch()
+    {
+        
+    }
+    
 }
