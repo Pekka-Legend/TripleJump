@@ -38,16 +38,11 @@ public class LoginManager : MonoBehaviourPunCallbacks
     }
     public void changeName()
     {
-        PhotonNetwork.LocalPlayer.NickName = screens[index].GetComponentInChildren<TMP_InputField>().text;
+        PhotonNetwork.NickName = screens[index].GetComponentInChildren<TMP_InputField>().text;
         index++;
         screens = changeScreen(screens);
     }
     public override void OnJoinedLobby()
-    {
-        index++;
-        screens = changeScreen(screens);
-    }
-    public void toRoomJoin()
     {
         index++;
         screens = changeScreen(screens);
