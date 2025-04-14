@@ -7,7 +7,7 @@ public class LoginManager : MonoBehaviourPunCallbacks
     public GameObject[] screens;
     private int index = 0;
     public GameObject startButton;
-    public GameObject oppName;
+    public TextMeshProUGUI oppName;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -70,8 +70,38 @@ public class LoginManager : MonoBehaviourPunCallbacks
     {
         index++;
         screens = changeScreen(screens);
+        foreach (Player p in PhotonNetwork.PlayerListOthers)
+        {
+            oppName.text = p.NickName;
+        }
+        if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
+        {
+            oppName.text = "Unknown";
+        }
         if (PhotonNetwork.LocalPlayer.IsMasterClient)
             startButton.SetActive(true);
+    }
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        foreach (Player p in PhotonNetwork.PlayerListOthers)
+        {
+            oppName.text = p.NickName;
+        }
+        if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
+        {
+            oppName.text = "Unknown";
+        }
+    }
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        foreach (Player p in PhotonNetwork.PlayerListOthers)
+        {
+            oppName.text = p.NickName;
+        }
+        if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
+        {
+            oppName.text = "Unknown";
+        }
     }
     public void startMatch()
     {

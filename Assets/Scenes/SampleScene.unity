@@ -444,6 +444,8 @@ MonoBehaviour:
   - {fileID: 1034161522}
   - {fileID: 272139443}
   - {fileID: 1589177972}
+  startButton: {fileID: 360976408}
+  oppName: {fileID: 1943875467}
 --- !u!1 &272139443
 GameObject:
   m_ObjectHideFlags: 0
