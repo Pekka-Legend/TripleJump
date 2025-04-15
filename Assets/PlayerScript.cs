@@ -4,6 +4,7 @@ using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using UnityEngine.UI;
 
 public class PlayerScript : MonoBehaviour
 {
@@ -29,6 +30,7 @@ public class PlayerScript : MonoBehaviour
     private float speedBoost = 0;
     private int jumps = 0;
     private bool shouldEnd = false;
+    public Text boostText;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -37,27 +39,67 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()//-1.38f->22.96f
     {
-        Debug.Log(speedBoost);
+        
         if (shouldStart && !shouldEnd)
         {
             if (steps >= 14)
             {
                 transform.position = new Vector2(transform.position.x + (speed + speedBoost) * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
-                
-                if (transform.position.y > 4.17)
+
+                if (transform.position.y > 4.17f)
                 {
                     index = 3;
                     GetComponent<SpriteRenderer>().sprite = sprites[index];
+                    canRecieveInput = false;
+                    bg.SetActive(false);
+                    key.text = " ";
                 }
-                else if (transform.position.y > 3.67)
+                else if (transform.position.y > 3.18f && yVel > 0)
                 {
                     index = 2;
                     GetComponent<SpriteRenderer>().sprite = sprites[index];
+                    if (canRecieveInput)
+                    {
+                        Debug.Log("hi");
+                        bg.SetActive(true);
+                        if (moveDir == 0) key.text = "A";
+                        else if (moveDir == 1) key.text = "D";
+                        else if (moveDir == 2) key.text = "W";
+                        else if (moveDir == 3) key.text = "S";
+
+
+                        if (Input.GetKey(KeyCode.A)) inputDir = 0;
+                        else if (Input.GetKey(KeyCode.D)) inputDir = 1;
+                        else if (Input.GetKey(KeyCode.W)) inputDir = 2;
+                        else if (Input.GetKey(KeyCode.S)) inputDir = 3;
+                        else inputDir = -1;
+                        if (inputDir != -1)
+                        {
+                            Debug.Log(fullTimer);
+                            if (inputDir == moveDir)
+                            {
+
+                                speedBoost += 1 / ((speedDamper * (fullTimer)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
+                            }
+                            else
+                            {
+                                speedBoost /= 2;
+                            }
+
+                            canRecieveInput = false;
+                            bg.SetActive(false);
+                            key.text = " ";
+                        }
+                    }
                 }
-                else if (transform.position.y > 3.17)
+                else if (transform.position.y > 3.17f)
                 {
                     index = 0;
                     GetComponent<SpriteRenderer>().sprite = sprites[index];
+                    bg.SetActive(false);
+                    key.text = " ";
+                    moveDir = (int)Random.Range(0f, 3f);
+                    canRecieveInput = true;
                 }
                 else
                 {
@@ -65,6 +107,9 @@ public class PlayerScript : MonoBehaviour
                     yVel = jumpForce;
                     ySpeed = 0;
                     jumps++;
+                    bg.SetActive(false);
+                    key.text = " ";
+                    fullTimer = 0;
                     if (jumps == 4)//you land after the third jump
                     {
                         shouldEnd = true;
@@ -73,6 +118,7 @@ public class PlayerScript : MonoBehaviour
                 }
                 yVel -= gravity * Time.deltaTime;
                 ySpeed += yVel * Time.deltaTime;
+                fullTimer += Time.deltaTime;
             }
             else
             {
@@ -139,6 +185,7 @@ public class PlayerScript : MonoBehaviour
                 fullTimer += Time.deltaTime;
                 transform.position = new Vector2(transform.position.x + speed * Time.deltaTime, transform.position.y);
             }
+            boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
         }
         else if (!shouldStart)
         {
@@ -149,6 +196,7 @@ public class PlayerScript : MonoBehaviour
         {
             index = 4;
             GetComponent<SpriteRenderer>().sprite = sprites[index];
+            boostText.text = "Distance: " + Mathf.Round(transform.position.x * 100) / 100; //rounded to two decimal places
         }
         
 
