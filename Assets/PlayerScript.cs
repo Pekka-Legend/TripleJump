@@ -20,10 +20,15 @@ public class PlayerScript : MonoBehaviour
     private bool shouldStart = false;
     private float ySpeed = 0;
     private float jumpMultiplier = 1;
-    public float multiplyDamper = 0;
+    public float jumpForce = 0;
     private float inputDir = -1;//-1 is no input (all others same as moveDir)
     private bool canRecieveInput = true;
     public float gravity = 9.8f;
+    private float yVel = 0;
+    public float speedDamper;
+    private float speedBoost = 0;
+    private int jumps = 0;
+    private bool shouldEnd = false;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -32,23 +37,42 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()//-1.38f->22.96f
     {
-        Debug.Log(jumpMultiplier);
-        if (shouldStart)
+        Debug.Log(speedBoost);
+        if (shouldStart && !shouldEnd)
         {
             if (steps >= 14)
             {
-                transform.position = new Vector2(transform.position.x + speed * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
-                if (transform.position.y > 3.17)
+                transform.position = new Vector2(transform.position.x + (speed + speedBoost) * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
+                
+                if (transform.position.y > 4.17)
                 {
                     index = 3;
+                    GetComponent<SpriteRenderer>().sprite = sprites[index];
+                }
+                else if (transform.position.y > 3.67)
+                {
+                    index = 2;
+                    GetComponent<SpriteRenderer>().sprite = sprites[index];
+                }
+                else if (transform.position.y > 3.17)
+                {
+                    index = 0;
                     GetComponent<SpriteRenderer>().sprite = sprites[index];
                 }
                 else
                 {
                     transform.position = new Vector2(transform.position.x, 3.17f);
-                    ySpeed = jumpMultiplier;
+                    yVel = jumpForce;
+                    ySpeed = 0;
+                    jumps++;
+                    if (jumps == 4)//you land after the third jump
+                    {
+                        shouldEnd = true;
+                        transform.position = new Vector2(transform.position.x, 2.92f);
+                    }
                 }
-                ySpeed-= gravity * Time.deltaTime;
+                yVel -= gravity * Time.deltaTime;
+                ySpeed += yVel * Time.deltaTime;
             }
             else
             {
@@ -71,11 +95,11 @@ public class PlayerScript : MonoBehaviour
                         if (inputDir == moveDir)
                         {
                             
-                            jumpMultiplier += 1 / ((fullTimer - swapTime) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
+                            speedBoost += 1 / ((speedDamper * (fullTimer - swapTime)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
                         }
                         else
                         {
-                            jumpMultiplier /= 2;
+                            speedBoost /= 2;
                         }
 
                         canRecieveInput = false;
@@ -116,11 +140,16 @@ public class PlayerScript : MonoBehaviour
                 transform.position = new Vector2(transform.position.x + speed * Time.deltaTime, transform.position.y);
             }
         }
-        else
+        else if (!shouldStart)
         {
+           
             if (Input.GetKeyDown(KeyCode.W)) shouldStart = true;
         }
-
+        else if (shouldEnd)
+        {
+            index = 4;
+            GetComponent<SpriteRenderer>().sprite = sprites[index];
+        }
         
 
     }
