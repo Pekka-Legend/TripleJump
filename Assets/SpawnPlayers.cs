@@ -9,12 +9,18 @@ public class SpawnPlayers : MonoBehaviour
     {
         PhotonNetwork.Instantiate("Player", new Vector3(-1.38f, 3.17f, -100f), Quaternion.identity);
         if (!PhotonNetwork.IsMasterClient) startButton.SetActive(false);
+        
     }
     public void startGame()
     {
-        Hashtable hash = new Hashtable();
-        hash.Add("currentPlayer", 0);
-        PhotonNetwork.LocalPlayer.SetCustomProperties(hash);
+        if (PhotonNetwork.IsMasterClient)
+        {
+            int currentPlayer = 1;
+            Hashtable roomProps = new Hashtable();
+            roomProps["currentPlayer"] = currentPlayer;
+            PhotonNetwork.CurrentRoom.SetCustomProperties(roomProps);
+            PhotonNetwork.CurrentRoom.IsOpen = false;
+        }
         startButton.SetActive(false);
 
     }

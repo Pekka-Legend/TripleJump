@@ -10,7 +10,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 using JetBrains.Annotations;
 using Photon.Realtime;
 
-public class PlayerScript : MonoBehaviour
+public class PlayerScript : MonoBehaviourPunCallbacks
 {
     public Sprite[] sprites;
     private float timer = 0;
@@ -37,7 +37,9 @@ public class PlayerScript : MonoBehaviour
     private PhotonView pv;
     public Camera cam;
     private GameObject startButton;
-    public Player activePlayer;
+    private float leaveTime = 0;
+    private int shouldChangeActivePlayer = 0;
+    private bool hasChangedIndex = false;
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -46,6 +48,12 @@ public class PlayerScript : MonoBehaviour
         key = FindFirstObjectByType<TextMeshProUGUI>();
         bg = FindFirstObjectByType<Canvas>().gameObject.GetComponentInChildren<Image>().gameObject;
         pv = GetComponent<PhotonView>();
+        if (PhotonNetwork.IsMasterClient && !PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer"))
+        {
+            Hashtable props = new Hashtable();
+            props.Add("currentPlayer", 1);
+            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        }
 
     }
 
@@ -56,7 +64,7 @@ public class PlayerScript : MonoBehaviour
         {
             if (shouldStart && !shouldEnd)
             {
-                if (activePlayer != null && activePlayer.IsLocal)
+                if ((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber)
                 {
                     
                     if (steps >= 14)
@@ -209,27 +217,65 @@ public class PlayerScript : MonoBehaviour
             }
             else if (!shouldStart)
             {
-
-                if (Input.GetKeyDown(KeyCode.W) && activePlayer != null && activePlayer.IsLocal) shouldStart = true;
-                
+                Debug.Log("AN: " + PhotonNetwork.LocalPlayer.ActorNumber);
+                if (Input.GetKeyDown(KeyCode.W) && PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer") && (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber) shouldStart = true;
+                if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer")) Debug.Log((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"]);
                 if (PhotonNetwork.IsMasterClient)
                 {
-                    if (PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"] != null)
+                    if (PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] != null)
                     {
-                        pv.RPC("start", RpcTarget.All, PhotonNetwork.PlayerList[(int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"]]);
-                        pv.RPC("SetActiveCamera", RpcTarget.All, PhotonNetwork.PlayerList[(int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"]].ActorNumber);
+                        
+                        pv.RPC("SetActiveCamera", RpcTarget.All, (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"]);
                     }
                 }
 
             }
-            else if (shouldEnd && activePlayer != null && activePlayer.IsLocal)
+            else if (shouldEnd)
             {
                 index = 4;
                 pv.RPC("changeSprite", RpcTarget.All, index);
                 boostText.text = "Distance: " + Mathf.Round(transform.position.x * 100) / 100; //rounded to two decimal places
+                if (!hasChangedIndex)
+                {
+                    Hashtable hash = new Hashtable();
+                    hash.Add("currentPlayer", (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] + 1);
+                    PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
+                    hasChangedIndex = true;
+                }
+                
+                if (leaveTime > 3)
+                {
+                    
+                    pv.RPC("masterChangeActivePlayer", RpcTarget.All);
+                }
+                leaveTime += Time.deltaTime;
+            }
+            if (PhotonNetwork.IsMasterClient && shouldChangeActivePlayer == 1)
+            {
+                timer = 0;
+                swapTime = 0;
+                index = 0;
+                moveDir = 0; //0 = left, 1 = right, 2 = up, 3 = down
+                fullTimer = 0;
+                steps = 0;
+                shouldStart = false;
+                ySpeed = 0;
+                inputDir = -1;//-1 is no input (all others same as moveDir)
+                canRecieveInput = true;
+                yVel = 0;
+                speedBoost = 0;
+                jumps = 0;
+                shouldEnd = false;
+                leaveTime = 0;
+                shouldChangeActivePlayer = 0;
+                hasChangedIndex = false;
+                transform.position = new Vector3(-1.38f, 3.17f, -100f);
+                pv.RPC("SetActiveCamera", RpcTarget.All, (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"]);
+                shouldChangeActivePlayer = 0;
+                Debug.Log("Changed active player");
             }
         }
-        if (PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"] != null) Debug.Log((int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"]);
+        if (PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] != null) Debug.Log((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"]);
 
 
     }
@@ -251,19 +297,6 @@ public class PlayerScript : MonoBehaviour
         GetComponent<SpriteRenderer>().sprite = sprites[index];
     }
     [PunRPC]
-    public void start(Player player)
-    {
-        
-        activePlayer = player;
-        Debug.Log("hi");
-    }
-    [PunRPC]
-    public void nextPlayer(Player player)
-    {
-        activePlayer = player;
-
-    }
-    [PunRPC]
     public void SetActiveCamera(int actorNumber)
     {
         GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
@@ -278,6 +311,17 @@ public class PlayerScript : MonoBehaviour
                 cam.gameObject.SetActive(isActive);
             }
         }
+    }
+
+    [PunRPC]
+    public void masterChangeActivePlayer()
+    {
+        shouldChangeActivePlayer = 1;
+    }
+
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        PhotonNetwork.Disconnect();
     }
 
 }
