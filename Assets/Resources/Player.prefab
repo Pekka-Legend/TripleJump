@@ -254,6 +254,7 @@ MonoBehaviour:
   gravity: 50
   speedDamper: 30
   boostText: {fileID: 0}
+  cam: {fileID: 7605517187645736975}
 --- !u!114 &7392384657837172760
 MonoBehaviour:
   m_ObjectHideFlags: 0

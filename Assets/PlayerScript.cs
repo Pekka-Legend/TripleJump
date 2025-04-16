@@ -33,6 +33,7 @@ public class PlayerScript : MonoBehaviour
     private bool shouldEnd = false;
     public Text boostText;
     private PhotonView pv;
+    public Camera cam;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -56,7 +57,7 @@ public class PlayerScript : MonoBehaviour
                     if (transform.position.y > 4.17f)
                     {
                         index = 3;
-                        GetComponent<SpriteRenderer>().sprite = sprites[index];
+                        pv.RPC("changeSprite", RpcTarget.All, index);
                         canRecieveInput = false;
                         bg.SetActive(false);
                         key.text = " ";
@@ -64,7 +65,7 @@ public class PlayerScript : MonoBehaviour
                     else if (transform.position.y > 3.18f && yVel > 0)
                     {
                         index = 2;
-                        GetComponent<SpriteRenderer>().sprite = sprites[index];
+                        pv.RPC("changeSprite", RpcTarget.All, index);
                         if (canRecieveInput)
                         {
                             Debug.Log("hi");
@@ -102,7 +103,7 @@ public class PlayerScript : MonoBehaviour
                     else if (transform.position.y > 3.17f)
                     {
                         index = 0;
-                        GetComponent<SpriteRenderer>().sprite = sprites[index];
+                        pv.RPC("changeSprite", RpcTarget.All, index);
                         bg.SetActive(false);
                         key.text = " ";
                         moveDir = (int)Random.Range(0f, 3f);
@@ -183,7 +184,7 @@ public class PlayerScript : MonoBehaviour
 
 
                         }
-                        GetComponent<SpriteRenderer>().sprite = sprites[index];
+                        pv.RPC("changeSprite", RpcTarget.All, index);
                         timer = 0;
 
 
@@ -202,15 +203,20 @@ public class PlayerScript : MonoBehaviour
             else if (shouldEnd)
             {
                 index = 4;
-                GetComponent<SpriteRenderer>().sprite = sprites[index];
+                pv.RPC("changeSprite", RpcTarget.All, index);
                 boostText.text = "Distance: " + Mathf.Round(transform.position.x * 100) / 100; //rounded to two decimal places
             }
         }
         else
         {
-            GetComponentInChildren<Camera>().gameObject.SetActive(false);
+            cam.gameObject.SetActive(false);
         }
         
 
+    }
+    [PunRPC]
+    public void changeSprite(int index)
+    {
+        GetComponent<SpriteRenderer>().sprite = sprites[index];
     }
 }
