@@ -40,9 +40,13 @@ public class LoginManager : MonoBehaviourPunCallbacks
     }
     public void changeName()
     {
-        PhotonNetwork.NickName = screens[index].GetComponentInChildren<TMP_InputField>().text;
-        index++;
-        screens = changeScreen(screens);
+        if (screens[index].GetComponentInChildren<TMP_InputField>().text.Length > 0 && screens[index].GetComponentInChildren<TMP_InputField>().text.Length <= 15)
+        {
+            PhotonNetwork.NickName = screens[index].GetComponentInChildren<TMP_InputField>().text;
+            index++;
+            screens = changeScreen(screens);
+        }
+            
     }
     public override void OnJoinedLobby()
     {
@@ -51,12 +55,15 @@ public class LoginManager : MonoBehaviourPunCallbacks
     }
     public void CreateRoom()
     {
-        int maxPlayers = 2;
-        RoomOptions roomOptions = new RoomOptions();
+        if (screens[index].GetComponentInChildren<TMP_InputField>().text.Length > 0 && screens[index].GetComponentInChildren<TMP_InputField>().text.Length <= 15)
+        {
+            int maxPlayers = 8;
+            RoomOptions roomOptions = new RoomOptions();
 
-        roomOptions.MaxPlayers = System.Convert.ToByte(maxPlayers + 1);
+            roomOptions.MaxPlayers = System.Convert.ToByte(maxPlayers + 1);
 
-        PhotonNetwork.CreateRoom(screens[index].GetComponentInChildren<TMP_InputField>().text, roomOptions);
+            PhotonNetwork.CreateRoom(screens[index].GetComponentInChildren<TMP_InputField>().text, roomOptions);
+        }
     }
     public void JoinRoom()
     {

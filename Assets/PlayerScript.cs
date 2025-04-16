@@ -6,6 +6,9 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 using UnityEngine.UI;
 using Photon.Pun;
+using Hashtable = ExitGames.Client.Photon.Hashtable;
+using JetBrains.Annotations;
+using Photon.Realtime;
 
 public class PlayerScript : MonoBehaviour
 {
@@ -21,7 +24,6 @@ public class PlayerScript : MonoBehaviour
     public float speed = 0;
     private bool shouldStart = false;
     private float ySpeed = 0;
-    private float jumpMultiplier = 1;
     public float jumpForce = 0;
     private float inputDir = -1;//-1 is no input (all others same as moveDir)
     private bool canRecieveInput = true;
@@ -34,6 +36,9 @@ public class PlayerScript : MonoBehaviour
     public Text boostText;
     private PhotonView pv;
     public Camera cam;
+    private GameObject startButton;
+    public Player activePlayer;
+    
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -41,6 +46,8 @@ public class PlayerScript : MonoBehaviour
         key = FindFirstObjectByType<TextMeshProUGUI>();
         bg = FindFirstObjectByType<Canvas>().gameObject.GetComponentInChildren<Image>().gameObject;
         pv = GetComponent<PhotonView>();
+        startButton = FindFirstObjectByType<Button>().gameObject;
+
     }
 
     // Update is called once per frame
@@ -199,6 +206,15 @@ public class PlayerScript : MonoBehaviour
             {
 
                 if (Input.GetKeyDown(KeyCode.W)) shouldStart = true;
+                if (!PhotonNetwork.IsMasterClient) startButton.SetActive(false);
+                else
+                {
+                    if ((int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"] != -1)
+                    {
+                        pv.RPC("start", RpcTarget.All, PhotonNetwork.PlayerList[(int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"]]);
+                    }
+                }
+                
             }
             else if (shouldEnd)
             {
@@ -211,12 +227,19 @@ public class PlayerScript : MonoBehaviour
         {
             cam.gameObject.SetActive(false);
         }
-        
 
     }
+    
     [PunRPC]
     public void changeSprite(int index)
     {
         GetComponent<SpriteRenderer>().sprite = sprites[index];
     }
+    [PunRPC]
+    public void start(Player player)
+    {
+        shouldStart = true;
+        activePlayer = player;
+    }
+    
 }
