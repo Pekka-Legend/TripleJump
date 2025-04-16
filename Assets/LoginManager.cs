@@ -65,18 +65,7 @@ public class LoginManager : MonoBehaviourPunCallbacks
     }
     public override void OnJoinedRoom()
     {
-        index++;
-        screens = changeScreen(screens);
-        foreach (Player p in PhotonNetwork.PlayerListOthers)
-        {
-            oppName.text = p.NickName;
-        }
-        if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
-        {
-            oppName.text = "Unknown";
-        }
-        if (PhotonNetwork.LocalPlayer.IsMasterClient)
-            startButton.SetActive(true);
+        PhotonNetwork.LoadLevel(1);
     }
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
@@ -100,9 +89,11 @@ public class LoginManager : MonoBehaviourPunCallbacks
             oppName.text = "Unknown";
         }
     }
+    
     public void startMatch()
     {
-        SceneManager.LoadScene(1);
+        
     }
-    
+
+
 }
