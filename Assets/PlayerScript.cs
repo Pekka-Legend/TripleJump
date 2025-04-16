@@ -42,11 +42,10 @@ public class PlayerScript : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        boostText = FindFirstObjectByType<Text>();
+        boostText = GameObject.FindGameObjectWithTag("boost").GetComponent<Text>();
         key = FindFirstObjectByType<TextMeshProUGUI>();
         bg = FindFirstObjectByType<Canvas>().gameObject.GetComponentInChildren<Image>().gameObject;
         pv = GetComponent<PhotonView>();
-        startButton = FindFirstObjectByType<Button>().gameObject;
 
     }
 
@@ -57,25 +56,91 @@ public class PlayerScript : MonoBehaviour
         {
             if (shouldStart && !shouldEnd)
             {
-                if (steps >= 14)
+                if (activePlayer != null && activePlayer.IsLocal)
                 {
-                    transform.position = new Vector2(transform.position.x + (speed + speedBoost) * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
+                    
+                    if (steps >= 14)
+                    {
+                        transform.position = new Vector2(transform.position.x + (speed + speedBoost) * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
 
-                    if (transform.position.y > 4.17f)
-                    {
-                        index = 3;
-                        pv.RPC("changeSprite", RpcTarget.All, index);
-                        canRecieveInput = false;
-                        bg.SetActive(false);
-                        key.text = " ";
-                    }
-                    else if (transform.position.y > 3.18f && yVel > 0)
-                    {
-                        index = 2;
-                        pv.RPC("changeSprite", RpcTarget.All, index);
-                        if (canRecieveInput)
+                        if (transform.position.y > 4.17f)
                         {
-                            Debug.Log("hi");
+                            index = 3;
+                            pv.RPC("changeSprite", RpcTarget.All, index);
+                            canRecieveInput = false;
+                            bg.SetActive(false);
+                            key.text = " ";
+                        }
+                        else if (transform.position.y > 3.18f && yVel > 0)
+                        {
+                            index = 2;
+                            pv.RPC("changeSprite", RpcTarget.All, index);
+                            if (canRecieveInput)
+                            {
+                                Debug.Log("hi");
+                                bg.SetActive(true);
+                                if (moveDir == 0) key.text = "A";
+                                else if (moveDir == 1) key.text = "D";
+                                else if (moveDir == 2) key.text = "W";
+                                else if (moveDir == 3) key.text = "S";
+
+
+                                if (Input.GetKey(KeyCode.A)) inputDir = 0;
+                                else if (Input.GetKey(KeyCode.D)) inputDir = 1;
+                                else if (Input.GetKey(KeyCode.W)) inputDir = 2;
+                                else if (Input.GetKey(KeyCode.S)) inputDir = 3;
+                                else inputDir = -1;
+                                if (inputDir != -1)
+                                {
+                                    Debug.Log(fullTimer);
+                                    if (inputDir == moveDir)
+                                    {
+
+                                        speedBoost += 1 / ((speedDamper * (fullTimer)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
+                                    }
+                                    else
+                                    {
+                                        speedBoost /= 2;
+                                    }
+
+                                    canRecieveInput = false;
+                                    bg.SetActive(false);
+                                    key.text = " ";
+                                }
+                            }
+                        }
+                        else if (transform.position.y > 3.17f)
+                        {
+                            index = 0;
+                            pv.RPC("changeSprite", RpcTarget.All, index);
+                            bg.SetActive(false);
+                            key.text = " ";
+                            moveDir = (int)Random.Range(0f, 3f);
+                            canRecieveInput = true;
+                        }
+                        else
+                        {
+                            transform.position = new Vector2(transform.position.x, 3.17f);
+                            yVel = jumpForce;
+                            ySpeed = 0;
+                            jumps++;
+                            bg.SetActive(false);
+                            key.text = " ";
+                            fullTimer = 0;
+                            if (jumps == 4)//you land after the third jump
+                            {
+                                shouldEnd = true;
+                                transform.position = new Vector2(transform.position.x, 2.92f);
+                            }
+                        }
+                        yVel -= gravity * Time.deltaTime;
+                        ySpeed += yVel * Time.deltaTime;
+                        fullTimer += Time.deltaTime;
+                    }
+                    else
+                    {
+                        if (index >= 0 && canRecieveInput && steps % 2 == 0)//make some sort of variable called "input was processed" for each step
+                        {
                             bg.SetActive(true);
                             if (moveDir == 0) key.text = "A";
                             else if (moveDir == 1) key.text = "D";
@@ -90,11 +155,10 @@ public class PlayerScript : MonoBehaviour
                             else inputDir = -1;
                             if (inputDir != -1)
                             {
-                                Debug.Log(fullTimer);
                                 if (inputDir == moveDir)
                                 {
 
-                                    speedBoost += 1 / ((speedDamper * (fullTimer)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
+                                    speedBoost += 1 / ((speedDamper * (fullTimer - swapTime)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
                                 }
                                 else
                                 {
@@ -102,134 +166,85 @@ public class PlayerScript : MonoBehaviour
                                 }
 
                                 canRecieveInput = false;
-                                bg.SetActive(false);
-                                key.text = " ";
                             }
+
                         }
-                    }
-                    else if (transform.position.y > 3.17f)
-                    {
-                        index = 0;
-                        pv.RPC("changeSprite", RpcTarget.All, index);
-                        bg.SetActive(false);
-                        key.text = " ";
-                        moveDir = (int)Random.Range(0f, 3f);
-                        canRecieveInput = true;
-                    }
-                    else
-                    {
-                        transform.position = new Vector2(transform.position.x, 3.17f);
-                        yVel = jumpForce;
-                        ySpeed = 0;
-                        jumps++;
-                        bg.SetActive(false);
-                        key.text = " ";
-                        fullTimer = 0;
-                        if (jumps == 4)//you land after the third jump
+                        else
                         {
-                            shouldEnd = true;
-                            transform.position = new Vector2(transform.position.x, 2.92f);
+                            bg.SetActive(false);
+                            key.text = " ";
                         }
+                        if (timer > swapTime)
+                        {
+                            index++;
+
+                            if (index > 2)
+                            {
+                                index = 0;
+
+                                fullTimer = 0;
+                                steps++;
+                                if (steps % 2 == 0)
+                                {
+                                    moveDir = (int)Random.Range(0f, 3f);
+                                    canRecieveInput = true;
+                                }
+
+
+
+                            }
+                            pv.RPC("changeSprite", RpcTarget.All, index);
+                            timer = 0;
+
+
+                        }
+                        timer += Time.deltaTime;
+                        fullTimer += Time.deltaTime;
+                        transform.position = new Vector2(transform.position.x + speed * Time.deltaTime, transform.position.y);
                     }
-                    yVel -= gravity * Time.deltaTime;
-                    ySpeed += yVel * Time.deltaTime;
-                    fullTimer += Time.deltaTime;
+                    boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
+                    Debug.Log("From Cam: " + transform.position);
                 }
-                else
-                {
-                    if (index >= 0 && canRecieveInput && steps % 2 == 0)//make some sort of variable called "input was processed" for each step
-                    {
-                        bg.SetActive(true);
-                        if (moveDir == 0) key.text = "A";
-                        else if (moveDir == 1) key.text = "D";
-                        else if (moveDir == 2) key.text = "W";
-                        else if (moveDir == 3) key.text = "S";
-
-
-                        if (Input.GetKey(KeyCode.A)) inputDir = 0;
-                        else if (Input.GetKey(KeyCode.D)) inputDir = 1;
-                        else if (Input.GetKey(KeyCode.W)) inputDir = 2;
-                        else if (Input.GetKey(KeyCode.S)) inputDir = 3;
-                        else inputDir = -1;
-                        if (inputDir != -1)
-                        {
-                            if (inputDir == moveDir)
-                            {
-
-                                speedBoost += 1 / ((speedDamper * (fullTimer - swapTime)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
-                            }
-                            else
-                            {
-                                speedBoost /= 2;
-                            }
-
-                            canRecieveInput = false;
-                        }
-
-                    }
-                    else
-                    {
-                        bg.SetActive(false);
-                        key.text = " ";
-                    }
-                    if (timer > swapTime)
-                    {
-                        index++;
-
-                        if (index > 2)
-                        {
-                            index = 0;
-
-                            fullTimer = 0;
-                            steps++;
-                            if (steps % 2 == 0)
-                            {
-                                moveDir = (int)Random.Range(0f, 3f);
-                                canRecieveInput = true;
-                            }
-
-
-
-                        }
-                        pv.RPC("changeSprite", RpcTarget.All, index);
-                        timer = 0;
-
-
-                    }
-                    timer += Time.deltaTime;
-                    fullTimer += Time.deltaTime;
-                    transform.position = new Vector2(transform.position.x + speed * Time.deltaTime, transform.position.y);
-                }
-                boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
+                
             }
             else if (!shouldStart)
             {
 
-                if (Input.GetKeyDown(KeyCode.W)) shouldStart = true;
-                if (!PhotonNetwork.IsMasterClient) startButton.SetActive(false);
-                else
+                if (Input.GetKeyDown(KeyCode.W) && activePlayer != null && activePlayer.IsLocal) shouldStart = true;
+                
+                if (PhotonNetwork.IsMasterClient)
                 {
-                    if ((int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"] != -1)
+                    if (PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"] != null)
                     {
                         pv.RPC("start", RpcTarget.All, PhotonNetwork.PlayerList[(int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"]]);
+                        pv.RPC("SetActiveCamera", RpcTarget.All, PhotonNetwork.PlayerList[(int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"]].ActorNumber);
                     }
                 }
-                
+
             }
-            else if (shouldEnd)
+            else if (shouldEnd && activePlayer != null && activePlayer.IsLocal)
             {
                 index = 4;
                 pv.RPC("changeSprite", RpcTarget.All, index);
                 boostText.text = "Distance: " + Mathf.Round(transform.position.x * 100) / 100; //rounded to two decimal places
             }
         }
-        else
-        {
-            cam.gameObject.SetActive(false);
-        }
+        if (PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"] != null) Debug.Log((int)PhotonNetwork.LocalPlayer.CustomProperties["currentPlayer"]);
+
 
     }
-    
+    GameObject GetPlayerObject(int actorNumber)
+    {
+        foreach (var obj in GameObject.FindGameObjectsWithTag("Player"))
+        {
+            PhotonView pv = obj.GetComponent<PhotonView>();
+            if (pv != null && pv.Owner.ActorNumber == actorNumber)
+            {
+                return obj;
+            }
+        }
+        return null;
+    }
     [PunRPC]
     public void changeSprite(int index)
     {
@@ -238,8 +253,31 @@ public class PlayerScript : MonoBehaviour
     [PunRPC]
     public void start(Player player)
     {
-        shouldStart = true;
+        
         activePlayer = player;
+        Debug.Log("hi");
     }
-    
+    [PunRPC]
+    public void nextPlayer(Player player)
+    {
+        activePlayer = player;
+
+    }
+    [PunRPC]
+    public void SetActiveCamera(int actorNumber)
+    {
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject player in players)
+        {
+            PhotonView view = player.GetComponent<PhotonView>();
+            Camera cam = player.GetComponentInChildren<Camera>(true);
+
+            if (cam != null)
+            {
+                bool isActive = view.Owner.ActorNumber == actorNumber;
+                cam.gameObject.SetActive(isActive);
+            }
+        }
+    }
+
 }

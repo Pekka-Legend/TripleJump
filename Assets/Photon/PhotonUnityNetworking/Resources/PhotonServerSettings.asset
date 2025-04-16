@@ -41,6 +41,10 @@ MonoBehaviour:
   - RespawnSpaceship
   - changeSprite
   - start
+  - nextPlayer
+  - getCamPos
+  - sendCamInfo
+  - SetActiveCamera
   DisableAutoOpenWizard: 1
   ShowSettings: 0
-  DevRegionSetOnce: 0
+  DevRegionSetOnce: 1
