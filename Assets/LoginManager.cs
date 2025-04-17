@@ -3,13 +3,17 @@ using Photon.Pun;
 using TMPro;
 using Photon.Realtime;
 using UnityEngine.SceneManagement;
-using Hashtable = ExitGames.Client.Photon.Hashtable;//How to Hashtable (unnecessary for this but I wrote it down incase I forget)
+using Hashtable = ExitGames.Client.Photon.Hashtable;
+using UnityEngine.UI;//How to Hashtable (unnecessary for this but I wrote it down incase I forget)
 public class LoginManager : MonoBehaviourPunCallbacks
 {
     public GameObject[] screens;
     private int index = 0;
     public GameObject startButton;
     public TextMeshProUGUI oppName;
+    public Sprite[] sprites;
+    public int spIndex = 0;
+    public Image spriteImage;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -102,6 +106,15 @@ public class LoginManager : MonoBehaviourPunCallbacks
     {
         
     }
-
+    public void changeSprite()
+    {
+        
+        spIndex += 1;
+        if (spIndex > sprites.Length - 1) spIndex = 0;
+        Hashtable hash = new Hashtable();
+        hash.Add("sprite", spIndex);
+        PhotonNetwork.LocalPlayer.SetCustomProperties(hash);
+        spriteImage.sprite = sprites[spIndex];
+    }
 
 }

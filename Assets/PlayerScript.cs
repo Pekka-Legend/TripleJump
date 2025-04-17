@@ -71,6 +71,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             props.Add("jumpCount", 0);
             PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         }
+        character = (int)PhotonNetwork.LocalPlayer.CustomProperties["sprite"];
 
 
     }
