@@ -207,7 +207,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                             {
                                 shouldEnd = true;
                                 transform.position = new Vector2(transform.position.x, 2.92f);
-                                if (Mathf.RoundToInt(speedBoost * 1000f) > (float)PhotonNetwork.LocalPlayer.CustomProperties["bestJump"])
+                                if (Mathf.Round(transform.position.x * 100) / 100 > (float)PhotonNetwork.LocalPlayer.CustomProperties["bestJump"])
                                 {
                                     Hashtable hash = new Hashtable();
                                     hash.Add("bestJump", Mathf.Round(transform.position.x * 100) / 100);
