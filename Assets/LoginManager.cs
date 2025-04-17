@@ -49,6 +49,9 @@ public class LoginManager : MonoBehaviourPunCallbacks
         {
             PhotonNetwork.NickName = screens[index].GetComponentInChildren<TMP_InputField>().text;
             index = 2;
+            Hashtable hash = new Hashtable();
+            hash.Add("sprite", spIndex);
+            PhotonNetwork.LocalPlayer.SetCustomProperties(hash);
             screens = changeScreen(screens);
         }
             
