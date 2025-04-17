@@ -37,20 +37,21 @@ public class LoginManager : MonoBehaviourPunCallbacks
     {
         
         PhotonNetwork.JoinLobby();
+        index = 0;
     }
     public void changeName()
     {
         if (screens[index].GetComponentInChildren<TMP_InputField>().text.Length > 0 && screens[index].GetComponentInChildren<TMP_InputField>().text.Length <= 15)
         {
             PhotonNetwork.NickName = screens[index].GetComponentInChildren<TMP_InputField>().text;
-            index++;
+            index = 2;
             screens = changeScreen(screens);
         }
             
     }
     public override void OnJoinedLobby()
     {
-        index++;
+        index = 1;
         screens = changeScreen(screens);
     }
     public void CreateRoom()
