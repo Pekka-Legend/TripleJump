@@ -296,7 +296,6 @@ MonoBehaviour:
   - {fileID: 973081610, guid: 3ff2adfc066f37e4294d574cf56be063, type: 3}
   swapTime: 0.15
   bg: {fileID: 0}
-  key: {fileID: 0}
   speed: 3.833333
   jumpForce: 20
   gravity: 50

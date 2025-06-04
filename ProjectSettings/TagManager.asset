@@ -7,6 +7,7 @@ TagManager:
   - boost
   - tbg
   - sbg
+  - pen
   layers:
   - Default
   - TransparentFX

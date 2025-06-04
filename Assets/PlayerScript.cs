@@ -18,15 +18,16 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     public float swapTime = 0;
     private int index = 0;
     public GameObject bg;
-    public TextMeshProUGUI key;
-    private int moveDir = 0; //0 = left, 1 = right, 2 = up, 3 = down
-    private float fullTimer = 0;
+    private float fullTimer = 0;//full swap time is .45 seconds
+    private float step2Time = 0;
+    private float pendulumBaseTime = 0;
+    private float maxTime = 0;
     private float steps = 0;
     public float speed = 0;
     private bool shouldStart = false;
     private float ySpeed = 0;
     public float jumpForce = 0;
-    private float inputDir = -1;//-1 is no input (all others same as moveDir)
+    private float inputDir = -1;
     private bool canRecieveInput = true;
     public float gravity = 9.8f;
     private float yVel = 0;
@@ -45,18 +46,22 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     private int jumpCount = 0;//this is the number of triple jumps taken, not number of jumps in one triple jump
     public GameObject showScoreObject;
     private int character = 0;
+    private GameObject pendulum;
+    private int cycles = 0;
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         boostText = GameObject.FindGameObjectWithTag("boost").GetComponent<Text>();
-        
+        pendulumBaseTime = swapTime;
         pv = GetComponent<PhotonView>();
         if (pv.IsMine)
         {
-            key = FindFirstObjectByType<TextMeshProUGUI>();
             bg = GameObject.FindGameObjectWithTag("tbg");
             showScoreObject = GameObject.FindGameObjectWithTag("sbg");
+            pendulum = GameObject.FindGameObjectWithTag("pen");
+            pendulum.SetActive(false);
+            bg.SetActive(false);
             Hashtable hash = new Hashtable();
             hash.Add("bestJump", 0.0f);
 
@@ -82,11 +87,11 @@ public class PlayerScript : MonoBehaviourPunCallbacks
         
         if (pv.IsMine)
         {
+            
             if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("showScore") && (int)PhotonNetwork.CurrentRoom.CustomProperties["showScore"] == 1)
             {
                 leaveTime = 0;
                 showScoreObject.SetActive(true);
-                key.text = " ";
                 bg.SetActive(false);
                 boostText.text = " ";
                 int i = 0;
@@ -137,6 +142,8 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                     
                     if (steps >= 14)
                     {
+                        bg.SetActive(false);
+                        pendulum.SetActive(false);
                         transform.position = new Vector2(transform.position.x + (speed + speedBoost) * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
 
                         if (transform.position.y > 4.17f)
@@ -144,32 +151,22 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                             index = 3;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
                             canRecieveInput = false;
-                            bg.SetActive(false);
-                            key.text = " ";
                         }
-                        else if (transform.position.y > 3.18f && yVel > 0)
+                        else if (transform.position.y > 3.18f && yVel > 0)//about to land thing
                         {
                             index = 2;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
+
+                            Debug.Log("hi");
                             if (canRecieveInput)
                             {
-                                Debug.Log("hi");
-                                bg.SetActive(true);
-                                if (moveDir == 0) key.text = "A";
-                                else if (moveDir == 1) key.text = "D";
-                                else if (moveDir == 2) key.text = "W";
-                                else if (moveDir == 3) key.text = "S";
 
 
-                                if (Input.GetKey(KeyCode.A)) inputDir = 0;
-                                else if (Input.GetKey(KeyCode.D)) inputDir = 1;
-                                else if (Input.GetKey(KeyCode.W)) inputDir = 2;
-                                else if (Input.GetKey(KeyCode.S)) inputDir = 3;
+                                if (Input.GetKey(KeyCode.Space)) inputDir = 0;
                                 else inputDir = -1;
                                 if (inputDir != -1)
                                 {
-                                    Debug.Log(fullTimer);
-                                    if (inputDir == moveDir)
+                                    if (inputDir == 0)
                                     {
 
                                         speedBoost += 1 / ((speedDamper * (fullTimer)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
@@ -180,8 +177,6 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                                     }
 
                                     canRecieveInput = false;
-                                    bg.SetActive(false);
-                                    key.text = " ";
                                 }
                             }
                         }
@@ -189,9 +184,6 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                         {
                             index = 0;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
-                            bg.SetActive(false);
-                            key.text = " ";
-                            moveDir = (int)Random.Range(0f, 3f);
                             canRecieveInput = true;
                         }
                         else
@@ -200,8 +192,6 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                             yVel = jumpForce;
                             ySpeed = 0;
                             jumps++;
-                            bg.SetActive(false);
-                            key.text = " ";
                             fullTimer = 0;
                             if (jumps == 4)//you land after the third jump
                             {
@@ -211,7 +201,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                                 {
                                     Hashtable hash = new Hashtable();
                                     hash.Add("bestJump", Mathf.Round(transform.position.x * 100) / 100);
-                                    
+
                                     PhotonNetwork.LocalPlayer.SetCustomProperties(hash);
                                 }
                                 hasChangedIndex = false;
@@ -224,40 +214,38 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                     }
                     else
                     {
-                        if (index >= 0 && canRecieveInput && steps % 2 == 0)//make some sort of variable called "input was processed" for each step
+                        pendulum.SetActive(true);
+                        Vector3 ang = pendulum.transform.eulerAngles;
+                        if (cycles % 2 == 0)
                         {
-                            bg.SetActive(true);
-                            if (moveDir == 0) key.text = "A";
-                            else if (moveDir == 1) key.text = "D";
-                            else if (moveDir == 2) key.text = "W";
-                            else if (moveDir == 3) key.text = "S";
+                            ang.z = Mathf.Rad2Deg * Mathf.Asin(Mathf.Clamp((-step2Time / (pendulumBaseTime * 6)) * 2 + 1, -1f, 1f));
+                        }
+                        else
+                        {
+                            ang.z = Mathf.Rad2Deg * Mathf.Asin(Mathf.Clamp((step2Time / (pendulumBaseTime * 6)) * 2 - 1, -1f, 1f));
+                        }
+                        //Debug.Log(ang.z);
+                        pendulum.transform.rotation = Quaternion.Euler(ang);
+                        if (index >= 0 && canRecieveInput)//make some sort of variable called "input was processed" for each step
+                        {
 
 
-                            if (Input.GetKey(KeyCode.A)) inputDir = 0;
-                            else if (Input.GetKey(KeyCode.D)) inputDir = 1;
-                            else if (Input.GetKey(KeyCode.W)) inputDir = 2;
-                            else if (Input.GetKey(KeyCode.S)) inputDir = 3;
+                            if (Input.GetMouseButtonDown(0)) inputDir = 0;
                             else inputDir = -1;
-                            if (inputDir != -1)
+                            if (inputDir == 0)
                             {
-                                if (inputDir == moveDir)
-                                {
 
-                                    speedBoost += 1 / ((speedDamper * (fullTimer - swapTime)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
-                                }
-                                else
-                                {
-                                    speedBoost /= 2;
-                                }
-
+                                speedBoost += .01f / (Mathf.Abs(step2Time - (pendulumBaseTime * 3)) + .05f);
+                                pendulumBaseTime -= (.01f / (Mathf.Abs(step2Time - (pendulumBaseTime * 3)) + .05f)) / 10f;
+                                if (pendulumBaseTime < .05f) pendulumBaseTime = .05f;
                                 canRecieveInput = false;
                             }
+
+
 
                         }
                         else
                         {
-                            bg.SetActive(false);
-                            key.text = " ";
                         }
                         if (timer > swapTime)
                         {
@@ -271,8 +259,8 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                                 steps++;
                                 if (steps % 2 == 0)
                                 {
-                                    moveDir = (int)Random.Range(0f, 3f);
-                                    canRecieveInput = true;
+
+
                                 }
 
 
@@ -283,29 +271,32 @@ public class PlayerScript : MonoBehaviourPunCallbacks
 
 
                         }
+                        if (step2Time > pendulumBaseTime * 6)
+                        {
+                            step2Time = 0;
+                            canRecieveInput = true;
+                            cycles++;
+                        }
                         timer += Time.deltaTime;
                         fullTimer += Time.deltaTime;
+                        step2Time += Time.deltaTime;
                         transform.position = new Vector2(transform.position.x + speed * Time.deltaTime, transform.position.y);
                     }
                     boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
-                    Debug.Log("From Cam: " + transform.position);
                 }
                 
             }
             else if (!shouldStart)
             {
-                Debug.Log("AN: " + PhotonNetwork.LocalPlayer.ActorNumber);
-                if (cam.gameObject.activeInHierarchy && Input.GetKeyDown(KeyCode.W) && PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer") && (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber) shouldStart = true;
+                if (cam.gameObject.activeInHierarchy && Input.GetKey(KeyCode.Space) && PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer") && (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber) shouldStart = true;
                 if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer") && (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber && transform.position.x == -1.38f) 
                 {
                     bg.SetActive(true);
-                    key.text = "W";
                     boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
                 }
                 else
                 {
                     bg.SetActive(false);
-                    key.text = " ";
                     boostText.text = " ";
                     
                 }
@@ -324,7 +315,6 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             }
             else if (shouldEnd)
             {
-                Debug.Log(transform.position.x);
                 index = 4;
                 pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
                 boostText.text = "Distance: " + Mathf.Round(transform.position.x * 100) / 100; //rounded to two decimal places
@@ -356,22 +346,27 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                 {
                     timer = 0;
                     index = 0;
-                    moveDir = 0; //0 = left, 1 = right, 2 = up, 3 = down
                     fullTimer = 0;
+                    step2Time = 0;
                     steps = 0;
                     shouldStart = false;
                     ySpeed = 0;
-                    inputDir = -1;//-1 is no input (all others same as moveDir)
+                    inputDir = -1;
                     canRecieveInput = true;
                     yVel = 0;
                     speedBoost = 0;
                     jumps = 0;
                     shouldEnd = false;
+                    cycles = 0;
                     leaveTime = 0;
                     shouldChangeActivePlayer = 0;
+                    pendulumBaseTime = swapTime;
                     transform.position = new Vector3(-1.38f, 3.17f, -100f);
                     showScoreObject.SetActive(false);
                     Hashtable hash = new Hashtable();
+                    Vector3 ang = pendulum.transform.eulerAngles;
+                    ang.z = 90;
+                    pendulum.transform.rotation = Quaternion.Euler(ang);
                     PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
                     pv.RPC("masterChangeActivePlayer", RpcTarget.All);
                     
@@ -383,10 +378,12 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             {
                 pv.RPC("SetActiveCamera", RpcTarget.All, (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"]);
                 shouldChangeActivePlayer = 0;
-                Debug.Log("Changed active player");
+            }
+            if (maxTime < fullTimer)
+            {
+                maxTime = fullTimer;
             }
         }
-        if (PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] != null) Debug.Log((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"]);
 
 
     }
