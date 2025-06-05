@@ -8,6 +8,9 @@ TagManager:
   - tbg
   - sbg
   - pen
+  - sm
+  - sl
+  - sr
   layers:
   - Default
   - TransparentFX

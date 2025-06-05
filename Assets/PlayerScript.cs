@@ -30,6 +30,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     private float inputDir = -1;
     private bool canRecieveInput = true;
     public float gravity = 9.8f;
+    public float gMultiplier = 0;
     private float yVel = 0;
     public float speedDamper;
     private float speedBoost = 0;
@@ -48,6 +49,9 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     private int character = 0;
     private GameObject pendulum;
     private int cycles = 0;
+    private GameObject scaleL;
+    private GameObject scaleR;
+    private GameObject scaleM;
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -60,6 +64,12 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             bg = GameObject.FindGameObjectWithTag("tbg");
             showScoreObject = GameObject.FindGameObjectWithTag("sbg");
             pendulum = GameObject.FindGameObjectWithTag("pen");
+            scaleL = GameObject.FindGameObjectWithTag("sl");
+            scaleR = GameObject.FindGameObjectWithTag("sr");
+            scaleM = GameObject.FindGameObjectWithTag("sm");
+            scaleR.SetActive(false);
+            scaleL.SetActive(false);
+            scaleM.SetActive(false);
             pendulum.SetActive(false);
             bg.SetActive(false);
             Hashtable hash = new Hashtable();
@@ -139,46 +149,39 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             {
                 if ((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber)
                 {
-                    
+                    Debug.Log(Input.mousePosition.x);
+                    Debug.Log("Equation: " + (((Input.mousePosition.x - 200f) / 1520f) * 30f + 42.5f));
                     if (steps >= 14)
                     {
                         bg.SetActive(false);
                         pendulum.SetActive(false);
+                        scaleL.SetActive(true);
+                        scaleR.SetActive(true);
+                        scaleM.SetActive(true);
+                        float pos = Mathf.Clamp(Input.mousePosition.x, 200f, 1720f);
+                        scaleL.transform.localPosition = new Vector2(scaleL.transform.localPosition.x, (((pos - 200f) / 1520f) * 30f + 42.5f));
+                        scaleR.transform.localPosition = new Vector2(scaleR.transform.localPosition.x, ((-(pos - 200f) / 1520f) * 30 + 72.5f));
                         transform.position = new Vector2(transform.position.x + (speed + speedBoost) * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
 
                         if (transform.position.y > 4.17f)
                         {
                             index = 3;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
-                            canRecieveInput = false;
+                            if (pos > 960)
+                            {
+                                speedBoost += (pos - 960) / 100000f;
+                            }
+                            else if (pos < 960)
+                            {
+                                gravity = 50 - (gMultiplier * (pos - 960));
+                            }
                         }
                         else if (transform.position.y > 3.18f && yVel > 0)//about to land thing
                         {
                             index = 2;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
 
-                            Debug.Log("hi");
-                            if (canRecieveInput)
-                            {
-
-
-                                if (Input.GetKey(KeyCode.Space)) inputDir = 0;
-                                else inputDir = -1;
-                                if (inputDir != -1)
-                                {
-                                    if (inputDir == 0)
-                                    {
-
-                                        speedBoost += 1 / ((speedDamper * (fullTimer)) + .25f);//this makes it so that the closer you are to the when the button shows up (which happens after the first animation frame ie swap time being used) the better jump Multiplier you get
-                                    }
-                                    else
-                                    {
-                                        speedBoost /= 2;
-                                    }
-
-                                    canRecieveInput = false;
-                                }
-                            }
+                            
                         }
                         else if (transform.position.y > 3.17f)
                         {
@@ -368,6 +371,9 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                     ang.z = 90;
                     pendulum.transform.rotation = Quaternion.Euler(ang);
                     PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
+                    scaleL.SetActive(false);
+                    scaleR.SetActive(false);
+                    scaleM.SetActive(false);
                     pv.RPC("masterChangeActivePlayer", RpcTarget.All);
                     
                 }

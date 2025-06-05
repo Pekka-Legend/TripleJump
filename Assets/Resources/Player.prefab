@@ -299,6 +299,7 @@ MonoBehaviour:
   speed: 3.833333
   jumpForce: 20
   gravity: 50
+  gMultiplier: 0.01
   speedDamper: 30
   boostText: {fileID: 0}
   cam: {fileID: 7605517187645736975}
