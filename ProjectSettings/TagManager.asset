@@ -11,6 +11,9 @@ TagManager:
   - sm
   - sl
   - sr
+  - cloud
+  - arrow
+  - surge
   layers:
   - Default
   - TransparentFX

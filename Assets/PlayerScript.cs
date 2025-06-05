@@ -10,6 +10,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 using JetBrains.Annotations;
 using Photon.Realtime;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
 
 public class PlayerScript : MonoBehaviourPunCallbacks
 {
@@ -52,7 +53,16 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     private GameObject scaleL;
     private GameObject scaleR;
     private GameObject scaleM;
-    
+    private GameObject[] clouds;
+    private bool hasWarped = false;
+    private Vector2 flickStart = Vector2.zero;
+    private Vector2 flickEnd = Vector2.one;
+    private GameObject arrow;
+    private int arrowDir = 0;
+    public float flickBonus = 0;
+    private int streak = 0;
+    private GameObject surge;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -64,14 +74,25 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             bg = GameObject.FindGameObjectWithTag("tbg");
             showScoreObject = GameObject.FindGameObjectWithTag("sbg");
             pendulum = GameObject.FindGameObjectWithTag("pen");
+            arrow = GameObject.FindGameObjectWithTag("arrow");
             scaleL = GameObject.FindGameObjectWithTag("sl");
             scaleR = GameObject.FindGameObjectWithTag("sr");
             scaleM = GameObject.FindGameObjectWithTag("sm");
+            clouds = GameObject.FindGameObjectsWithTag("cloud");
+            surge = GameObject.FindGameObjectWithTag("surge");
+            
+            System.Array.Sort(clouds, (a,b) => a.transform.localPosition.x.CompareTo(b.transform.localPosition.x));
             scaleR.SetActive(false);
             scaleL.SetActive(false);
             scaleM.SetActive(false);
             pendulum.SetActive(false);
+            arrow.SetActive(false);
             bg.SetActive(false);
+            surge.SetActive(false);
+            for (int i = 0; i < clouds.Length; i++)
+            {
+                clouds[i].gameObject.SetActive(false);
+            }
             Hashtable hash = new Hashtable();
             hash.Add("bestJump", 0.0f);
 
@@ -149,45 +170,176 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             {
                 if ((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber)
                 {
-                    Debug.Log(Input.mousePosition.x);
-                    Debug.Log("Equation: " + (((Input.mousePosition.x - 200f) / 1520f) * 30f + 42.5f));
+                    
+                    
                     if (steps >= 14)
                     {
+                        if (!hasWarped)
+                        {
+                            Mouse.current.WarpCursorPosition(new Vector2(480f, Input.mousePosition.y));
+                            hasWarped = true;
+                            Time.timeScale = .75f;
+                        }
+                        
+                        float pos = Mathf.Clamp(Input.mousePosition.x, 100f, 860f);
                         bg.SetActive(false);
                         pendulum.SetActive(false);
-                        scaleL.SetActive(true);
-                        scaleR.SetActive(true);
-                        scaleM.SetActive(true);
-                        float pos = Mathf.Clamp(Input.mousePosition.x, 200f, 1720f);
-                        scaleL.transform.localPosition = new Vector2(scaleL.transform.localPosition.x, (((pos - 200f) / 1520f) * 30f + 42.5f));
-                        scaleR.transform.localPosition = new Vector2(scaleR.transform.localPosition.x, ((-(pos - 200f) / 1520f) * 30 + 72.5f));
+                        if (jumps == 1)
+                        {
+                            scaleL.SetActive(true);
+                            scaleR.SetActive(true);
+                            scaleM.SetActive(true);
+                            scaleL.transform.localPosition = new Vector2(scaleL.transform.localPosition.x, (((pos - 100f) / 760f) * 30f + 42.5f));
+                            scaleR.transform.localPosition = new Vector2(scaleR.transform.localPosition.x, ((-(pos - 100f) / 760f) * 30f + 72.5f));
+                        }
+                        else
+                        {
+                            scaleL.SetActive(false);
+                            scaleR.SetActive(false);
+                            scaleM.SetActive(false);
+                            
+                        }
+
+                        
+                        
                         transform.position = new Vector2(transform.position.x + (speed + speedBoost) * Time.deltaTime, transform.position.y + ySpeed * Time.deltaTime);
 
                         if (transform.position.y > 4.17f)
                         {
                             index = 3;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
-                            if (pos > 960)
+                            if (jumps == 1)//if doing the first jump
                             {
-                                speedBoost += (pos - 960) / 100000f;
+                                if (pos > 480)
+                                {
+                                    speedBoost += (pos - 480) / 1000000f;
+                                    gravity = 50;
+                                    Time.timeScale = .75f;
+                                    for (int i = 0; i < 3; i++) clouds[i].SetActive(false);
+                                }
+                                else if (pos < 480)
+                                {
+                                    int cloudsActive = 0;
+                                    for (int i = 0; i < 3; i++)
+                                    {
+                                        if (gMultiplier * (480 - pos) > (3.8f / 3) * i)
+                                        {
+                                            clouds[i].SetActive(true);
+                                            cloudsActive++;
+                                        }
+                                        else
+                                        {
+                                            clouds[i].SetActive(false);
+                                        }
+                                    }
+                                    gravity = 50 - (gMultiplier * (480 - pos));
+                                    speedBoost -= (480 - pos) / (cloudsActive * 500000f / 3);
+                                    Time.timeScale = .75f - (cloudsActive / 6f);
+                                }
                             }
-                            else if (pos < 960)
+                            else if (jumps == 2)
                             {
-                                gravity = 50 - (gMultiplier * (pos - 960));
+                                arrow.SetActive(true);
+                                arrow.transform.rotation = Quaternion.Euler(new Vector3(arrow.transform.eulerAngles.x, arrow.transform.eulerAngles.y, arrowDir * 90f));
+                                Time.timeScale = .35f;
+                                if (Input.GetMouseButtonDown(0))
+                                {
+                                    flickStart = Input.mousePosition;
+                                }
+                                if (Input.GetMouseButtonUp(0))
+                                {
+                                    flickEnd = Input.mousePosition;
+                                    if (Math.Abs(flickStart.x - flickEnd.x) > Math.Abs(flickStart.y - flickEnd.y))//if the flick is on the x axis (right or left)
+                                    {
+                                        if (flickStart.x < flickEnd.x)//right
+                                        {
+                                            Debug.Log("right");
+                                            if (arrowDir == 0)
+                                            {
+                                                streak++;
+                                                speedBoost += flickBonus * streak;
+                                            }
+                                            else
+                                            {
+                                                speedBoost -= 2 * flickBonus;
+                                                streak = 0;
+                                            }
+                                        }
+                                        else//left (technically also middle but idc)
+                                        {
+                                            Debug.Log("left");
+                                            if (arrowDir == 2)
+                                            {
+                                                streak++;
+                                                speedBoost += flickBonus * streak;
+                                            }
+                                            else
+                                            {
+                                                speedBoost -= 2 * flickBonus;
+                                                streak = 0;
+                                            }
+                                        }
+                                    }
+                                    else//flick is up or down
+                                    {
+                                        if (flickStart.y < flickEnd.y)//up
+                                        {
+                                            Debug.Log("up");
+                                            if (arrowDir == 1)
+                                            {
+                                                streak++;
+                                                speedBoost += flickBonus * streak;
+                                            }
+                                            else
+                                            {
+                                                speedBoost -= 2 * flickBonus;
+                                                streak = 0;
+                                            }
+                                        }
+                                        else//down (technically also middle but idc)
+                                        {
+                                            Debug.Log("down");
+                                            if (arrowDir == 3)
+                                            {
+                                                streak++;
+                                                speedBoost += flickBonus * streak;
+                                            }
+                                            else
+                                            {
+                                                speedBoost -= 2 * flickBonus;
+                                                streak = 0;
+                                            }
+                                        }
+                                    }
+                                    int pd = arrowDir;
+                                    while (pd == arrowDir) arrowDir = Random.Range(0, 4);//can't do the same direction twice in a row
+                                }
                             }
+                            else if (jumps == 3)
+                            {
+                                arrow.SetActive(false);
+                                surge.SetActive(true);
+                                if (Input.GetMouseButtonDown(0))
+                                {
+                                    speedBoost += .05f;
+                                }
+                            }
+
                         }
                         else if (transform.position.y > 3.18f && yVel > 0)//about to land thing
                         {
                             index = 2;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
 
-                            
+                            arrow.SetActive(false);
+
                         }
                         else if (transform.position.y > 3.17f)
                         {
                             index = 0;
                             pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
                             canRecieveInput = true;
+
                         }
                         else
                         {
@@ -196,6 +348,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                             ySpeed = 0;
                             jumps++;
                             fullTimer = 0;
+                            
                             if (jumps == 4)//you land after the third jump
                             {
                                 shouldEnd = true;
@@ -231,7 +384,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                         pendulum.transform.rotation = Quaternion.Euler(ang);
                         if (index >= 0 && canRecieveInput)//make some sort of variable called "input was processed" for each step
                         {
-
+                            
 
                             if (Input.GetMouseButtonDown(0)) inputDir = 0;
                             else inputDir = -1;
@@ -294,6 +447,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                 if (cam.gameObject.activeInHierarchy && Input.GetKey(KeyCode.Space) && PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer") && (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber) shouldStart = true;
                 if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("currentPlayer") && (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] == PhotonNetwork.LocalPlayer.ActorNumber && transform.position.x == -1.38f) 
                 {
+                    arrowDir = Random.Range(0, 4);
                     bg.SetActive(true);
                     boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
                 }
@@ -320,9 +474,15 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             {
                 index = 4;
                 pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
+                surge.SetActive(false);
                 boostText.text = "Distance: " + Mathf.Round(transform.position.x * 100) / 100; //rounded to two decimal places
                 if (!hasChangedIndex)
                 {
+                    Time.timeScale = 1f;
+                    for (int i = 0; i < clouds.Length; i++)
+                    {
+                        clouds[i].gameObject.SetActive(false);
+                    }
                     Hashtable hash = new Hashtable();
                     if ((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] + 1 > PhotonNetwork.CurrentRoom.PlayerCount)
                     {
@@ -374,6 +534,9 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                     scaleL.SetActive(false);
                     scaleR.SetActive(false);
                     scaleM.SetActive(false);
+                    hasWarped = false;
+                    streak = 0;
+
                     pv.RPC("masterChangeActivePlayer", RpcTarget.All);
                     
                 }
