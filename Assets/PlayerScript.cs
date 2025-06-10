@@ -54,6 +54,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     private GameObject scaleR;
     private GameObject scaleM;
     private GameObject[] clouds;
+    private String boostTextText = "";
     private bool hasWarped = false;
     private Vector2 flickStart = Vector2.zero;
     private Vector2 flickEnd = Vector2.one;
@@ -66,11 +67,13 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        boostText = GameObject.FindGameObjectWithTag("boost").GetComponent<Text>();
+        
         pendulumBaseTime = swapTime;
+        boostText = GameObject.FindGameObjectWithTag("boost").GetComponent<Text>();
         pv = GetComponent<PhotonView>();
         if (pv.IsMine)
         {
+            
             bg = GameObject.FindGameObjectWithTag("tbg");
             showScoreObject = GameObject.FindGameObjectWithTag("sbg");
             pendulum = GameObject.FindGameObjectWithTag("pen");
@@ -118,23 +121,31 @@ public class PlayerScript : MonoBehaviourPunCallbacks
         
         if (pv.IsMine)
         {
-            
             if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("showScore") && (int)PhotonNetwork.CurrentRoom.CustomProperties["showScore"] == 1)
             {
                 leaveTime = 0;
                 showScoreObject.SetActive(true);
                 bg.SetActive(false);
-                boostText.text = " ";
+                pv.RPC("changeHUD", RpcTarget.All, 0, " ");
                 int i = 0;
                 float bestJump = 0;
                 String bestJumper = "";
+                int lastPlayer = (int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] - 2;
+                if (lastPlayer == -1) lastPlayer = PhotonNetwork.CurrentRoom.PlayerCount - 1;
                 if ((int)PhotonNetwork.CurrentRoom.CustomProperties["jumpCount"] < 5)
                 {
                     foreach (Player p in PhotonNetwork.PlayerList)
                     {
                         showScoreObject.GetComponent<TextComponent>().texts[i].text = p.NickName + ": " + p.CustomProperties["bestJump"];
+                        if (lastPlayer == i)//player count is 1-6, i is 0-5
+                        {
+                            showScoreObject.GetComponent<TextComponent>().texts[6].text = "Last Jump:";
+                            showScoreObject.GetComponent<TextComponent>().texts[7].text = p.NickName + ": " + PhotonNetwork.CurrentRoom.CustomProperties["lastJump"];
+                        }
+                        
                         i++;
                     }
+
                 }
                 else
                 {
@@ -150,7 +161,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                     showScoreObject.GetComponent<TextComponent>().texts[1].text = bestJumper + ": " + bestJump;
                 }
                 showScoreTime += Time.deltaTime;
-                if (showScoreTime > 10)
+                if (showScoreTime > 3)
                 {
                     Hashtable hash = new Hashtable();
                     hash.Add("showScore", 0);
@@ -359,6 +370,10 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                                     hash.Add("bestJump", Mathf.Round(transform.position.x * 100) / 100);
 
                                     PhotonNetwork.LocalPlayer.SetCustomProperties(hash);
+
+                                    hash = new Hashtable();
+                                    hash.Add("lastJump", Mathf.Round(transform.position.x * 100) / 100);
+                                    PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
                                 }
                                 hasChangedIndex = false;
                                 showScoreTime = 0;
@@ -438,7 +453,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                         step2Time += Time.deltaTime;
                         transform.position = new Vector2(transform.position.x + speed * Time.deltaTime, transform.position.y);
                     }
-                    boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
+                    pv.RPC("changeHUD", RpcTarget.All, 0, "Boost: " + (Mathf.RoundToInt(speedBoost * 1000f)).ToString());
                 }
                 
             }
@@ -449,13 +464,13 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                 {
                     arrowDir = Random.Range(0, 4);
                     bg.SetActive(true);
-                    boostText.text = "Boost: " + Mathf.RoundToInt(speedBoost * 1000f);
+                    pv.RPC("changeHUD", RpcTarget.All, 0, ("Boost: " + Mathf.RoundToInt(speedBoost * 1000f)));
                 }
                 else
                 {
                     bg.SetActive(false);
-                    boostText.text = " ";
                     
+
                 }
                 if (PhotonNetwork.IsMasterClient)
                 {
@@ -475,7 +490,6 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                 index = 4;
                 pv.RPC("changeSprite", RpcTarget.All, index + (5 * character));
                 surge.SetActive(false);
-                boostText.text = "Distance: " + Mathf.Round(transform.position.x * 100) / 100; //rounded to two decimal places
                 if (!hasChangedIndex)
                 {
                     Time.timeScale = 1f;
@@ -484,14 +498,16 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                         clouds[i].gameObject.SetActive(false);
                     }
                     Hashtable hash = new Hashtable();
+                    if ((int)PhotonNetwork.CurrentRoom.CustomProperties["showScore"] == 0)
+                    {
+
+                        hash.Add("showScore", 1);
+                    }
                     if ((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] + 1 > PhotonNetwork.CurrentRoom.PlayerCount)
                     {
                         hash.Add("jumpCount", (int)PhotonNetwork.CurrentRoom.CustomProperties["jumpCount"] + 1);
                         hash.Add("currentPlayer", 1);
-                        if ((int)PhotonNetwork.CurrentRoom.CustomProperties["showScore"] == 0) {
-                            
-                            hash.Add("showScore", 1);
-                        } 
+                        
 
 
                     }
@@ -587,6 +603,19 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                 bool isActive = view.Owner.ActorNumber == actorNumber;
                 cam.gameObject.SetActive(isActive);
             }
+        }
+    }
+    [PunRPC]
+    public void changeHUD(int action, String parameter = "")
+    {
+        Debug.Log(parameter + ", " + action);
+        if (action == 0)
+        {
+            boostText.text = parameter;
+        }
+        else if (action == 1)
+        {
+
         }
     }
 

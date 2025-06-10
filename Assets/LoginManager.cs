@@ -65,7 +65,7 @@ public class LoginManager : MonoBehaviourPunCallbacks
     {
         if (screens[index].GetComponentInChildren<TMP_InputField>().text.Length > 0 && screens[index].GetComponentInChildren<TMP_InputField>().text.Length <= 15)
         {
-            int maxPlayers = 8;
+            int maxPlayers = 6;
             RoomOptions roomOptions = new RoomOptions();
 
             roomOptions.MaxPlayers = System.Convert.ToByte(maxPlayers + 1);
