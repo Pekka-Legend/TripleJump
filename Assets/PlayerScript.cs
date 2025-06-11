@@ -63,6 +63,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
     public float flickBonus = 0;
     private int streak = 0;
     private GameObject surge;
+    public GameObject spotlight;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -70,6 +71,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
         
         pendulumBaseTime = swapTime;
         boostText = GameObject.FindGameObjectWithTag("boost").GetComponent<Text>();
+        
         pv = GetComponent<PhotonView>();
         if (pv.IsMine)
         {
@@ -108,6 +110,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
             props.Add("currentPlayer", 1);
             props.Add("showScore", 0);
             props.Add("jumpCount", 0);
+            props.Add("leader", 0);
             PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         }
         character = (int)PhotonNetwork.LocalPlayer.CustomProperties["sprite"];
@@ -121,8 +124,10 @@ public class PlayerScript : MonoBehaviourPunCallbacks
         
         if (pv.IsMine)
         {
+            //if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("leader")) Debug.Log(PhotonNetwork.CurrentRoom.CustomProperties["leader"]);
             if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("showScore") && (int)PhotonNetwork.CurrentRoom.CustomProperties["showScore"] == 1)
             {
+                pv.RPC("showSpotlight", RpcTarget.All, false);
                 leaveTime = 0;
                 showScoreObject.SetActive(true);
                 bg.SetActive(false);
@@ -165,6 +170,19 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                 {
                     Hashtable hash = new Hashtable();
                     hash.Add("showScore", 0);
+                    float bj = 0;
+                    int bji = 0;
+                    int index = 1;//start at 1 bc actornumber starts at 1
+                    foreach (Player p in PhotonNetwork.PlayerList)
+                    {
+                        if ((float)p.CustomProperties["bestJump"] > bj)
+                        {
+                            bj = (float)p.CustomProperties["bestJump"];
+                            bji = index;
+                        }
+                        index++;
+                    }
+                    hash.Add("leader", bji);
                     PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
                     
                     showScoreObject.SetActive(false);
@@ -364,16 +382,18 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                             {
                                 shouldEnd = true;
                                 transform.position = new Vector2(transform.position.x, 2.92f);
+                                Hashtable hash = new Hashtable();
+                                hash.Add("lastJump", Mathf.Round(transform.position.x * 100) / 100);
+
+                                PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
                                 if (Mathf.Round(transform.position.x * 100) / 100 > (float)PhotonNetwork.LocalPlayer.CustomProperties["bestJump"])
                                 {
-                                    Hashtable hash = new Hashtable();
+                                    hash = new Hashtable();
                                     hash.Add("bestJump", Mathf.Round(transform.position.x * 100) / 100);
 
                                     PhotonNetwork.LocalPlayer.SetCustomProperties(hash);
 
-                                    hash = new Hashtable();
-                                    hash.Add("lastJump", Mathf.Round(transform.position.x * 100) / 100);
-                                    PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
+                                    
                                 }
                                 hasChangedIndex = false;
                                 showScoreTime = 0;
@@ -465,6 +485,10 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                     arrowDir = Random.Range(0, 4);
                     bg.SetActive(true);
                     pv.RPC("changeHUD", RpcTarget.All, 0, ("Boost: " + Mathf.RoundToInt(speedBoost * 1000f)));
+                    if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("leader") && (int)PhotonNetwork.CurrentRoom.CustomProperties["leader"] == PhotonNetwork.LocalPlayer.ActorNumber)
+                    {
+                        pv.RPC("showSpotlight", RpcTarget.All, true);
+                    }
                 }
                 else
                 {
@@ -503,7 +527,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
 
                         hash.Add("showScore", 1);
                     }
-                    if ((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] + 1 > PhotonNetwork.CurrentRoom.PlayerCount)
+                    if ((int)PhotonNetwork.CurrentRoom.CustomProperties["currentPlayer"] + 1 > PhotonNetwork.CurrentRoom.PlayerCount)//when we need to go to the next round
                     {
                         hash.Add("jumpCount", (int)PhotonNetwork.CurrentRoom.CustomProperties["jumpCount"] + 1);
                         hash.Add("currentPlayer", 1);
@@ -540,6 +564,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
                     leaveTime = 0;
                     shouldChangeActivePlayer = 0;
                     pendulumBaseTime = swapTime;
+                    showScoreTime = 0;
                     transform.position = new Vector3(-1.38f, 3.17f, -100f);
                     showScoreObject.SetActive(false);
                     Hashtable hash = new Hashtable();
@@ -611,7 +636,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks
         Debug.Log(parameter + ", " + action);
         if (action == 0)
         {
-            boostText.text = parameter;
+            if (boostText != null) boostText.text = parameter;
         }
         else if (action == 1)
         {
@@ -630,6 +655,11 @@ public class PlayerScript : MonoBehaviourPunCallbacks
         shouldEnd = true;
         shouldStart = true;
         showScoreTime = 0;
+    }
+    [PunRPC]
+    public void showSpotlight(bool setting)
+    {
+        spotlight.SetActive(setting);
     }
     
 
